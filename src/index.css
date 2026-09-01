@@ -235,7 +235,6 @@ select {
 
 .legend-list,
 .tx-list,
-.account-balances,
 .manage-list {
   list-style: none;
   margin: 0;
@@ -243,7 +242,6 @@ select {
 }
 
 .legend-list li,
-.account-balances li,
 .manage-list li {
   display: flex;
   align-items: center;
@@ -252,8 +250,7 @@ select {
   border-bottom: 1px solid #eef3f0;
 }
 
-.legend-list strong,
-.account-balances strong {
+.legend-list strong {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
@@ -532,6 +529,28 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #eef3f0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pager-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ghost-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .month-picker {

@@ -1,4 +1,5 @@
 import { useAsync } from '../lib/useAsync'
+import { PIE_COLORS } from '../lib/chartColors'
 import { formatMoney, monthLabel } from '../lib/format'
 import { EmptyState, PageStatus, Panel, StatCard } from '../components/ui'
 import {
@@ -13,8 +14,6 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-
-const PIE_COLORS = ['#1f7a63', '#3aa88a', '#7bc4ae', '#c46b4a', '#d7a15c', '#6b8ea1', '#8a7bb8', '#b07a8a']
 
 interface OverviewPageProps {
   onRecord: () => void
@@ -32,7 +31,7 @@ export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
             <StatCard label="本月收入" value={data.monthIncome} tone="income" />
             <StatCard label="本月支出" value={data.monthExpense} tone="expense" />
             <StatCard label="本月结余" value={data.monthBalance} />
-            <StatCard label="账户合计" value={data.totalBalance} hint="含各账户初始余额" />
+            <StatCard label="累计结余" value={data.totalBalance} hint="全部收入减支出" />
           </div>
 
           <div className="split-grid">
@@ -94,52 +93,39 @@ export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
             </Panel>
           </div>
 
-          <div className="split-grid">
-            <Panel
-              title="最近流水"
-              action={
-                <button type="button" className="text-btn" onClick={onRecord}>
-                  记一笔
-                </button>
-              }
-            >
-              {data.recent.length === 0 ? (
-                <EmptyState text="还没有流水，先记一笔吧" />
-              ) : (
-                <ul className="tx-list">
-                  {data.recent.map((tx) => (
-                    <li key={tx.id}>
-                      <button type="button" className="tx-row" onClick={() => onEdit(tx.id)}>
-                        <span className="tx-icon">{tx.category_icon}</span>
-                        <span className="tx-main">
-                          <strong>{tx.category_name}</strong>
-                          <small>
-                            {tx.occurred_at} · {tx.account_name}
-                            {tx.note ? ` · ${tx.note}` : ''}
-                          </small>
-                        </span>
-                        <span className={tx.type === 'income' ? 'amount income' : 'amount expense'}>
-                          {tx.type === 'income' ? '+' : '-'}
-                          {formatMoney(tx.amount).replace('¥', '¥')}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-
-            <Panel title="账户余额">
-              <ul className="account-balances">
-                {data.accounts.map((account) => (
-                  <li key={account.id}>
-                    <span>{account.name}</span>
-                    <strong>{formatMoney(account.balance)}</strong>
+          <Panel
+            title="最近流水"
+            action={
+              <button type="button" className="text-btn" onClick={onRecord}>
+                记一笔
+              </button>
+            }
+          >
+            {data.recent.length === 0 ? (
+              <EmptyState text="还没有流水，先记一笔吧" />
+            ) : (
+              <ul className="tx-list">
+                {data.recent.map((tx) => (
+                  <li key={tx.id}>
+                    <button type="button" className="tx-row" onClick={() => onEdit(tx.id)}>
+                      <span className="tx-icon">{tx.category_icon}</span>
+                      <span className="tx-main">
+                        <strong>{tx.category_name}</strong>
+                        <small>
+                          {tx.occurred_at}
+                          {tx.note ? ` · ${tx.note}` : ''}
+                        </small>
+                      </span>
+                      <span className={tx.type === 'income' ? 'amount income' : 'amount expense'}>
+                        {tx.type === 'income' ? '+' : '-'}
+                        {formatMoney(tx.amount)}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
-            </Panel>
-          </div>
+            )}
+          </Panel>
         </div>
       ) : null}
     </PageStatus>

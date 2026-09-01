@@ -1,8 +1,12 @@
+import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { MarkdownStore } from '../electron/markdown-db'
+import { retentionCutoffIso } from '../shared/retention'
 
 async function main() {
-  const dataDir = path.join(process.cwd(), 'data')
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cjl-accounts-smoke-'))
+  fs.copyFileSync(path.join(process.cwd(), 'data', 'categories.md'), path.join(dataDir, 'categories.md'))
   const store = new MarkdownStore(dataDir)
 
   const today = new Date()
@@ -12,7 +16,6 @@ async function main() {
     type: 'expense',
     amount: 32.5,
     category_id: 1,
-    account_id: 2,
     occurred_at: iso,
     note: '午餐',
   })
@@ -20,7 +23,6 @@ async function main() {
     type: 'income',
     amount: 8000,
     category_id: 10,
-    account_id: 4,
     occurred_at: iso,
     note: '工资入账',
   })
@@ -28,7 +30,6 @@ async function main() {
     type: 'expense',
     amount: 36,
     category_id: 1,
-    account_id: 2,
     occurred_at: iso,
     note: '午餐（加饮料）',
   })
@@ -48,8 +49,35 @@ async function main() {
   const empty = await store.listTransactions({})
   if (empty.length !== 0) throw new Error('cleanup failed')
 
+  const oldDate = '2020-01-15'
+  fs.appendFileSync(
+    path.join(dataDir, 'transactions.md'),
+    `| 9999 | expense | 1.00 | 1 | ${oldDate} | 过期测试 |\n`,
+  )
+  const removed = await store.purgeExpiredTransactions()
+  if (removed < 1) throw new Error('expected expired rows to be purged')
+  const leftover = await store.listTransactions({})
+  if (leftover.some((tx) => tx.occurred_at < retentionCutoffIso() || tx.id === 9999)) {
+    throw new Error('expired transaction still present')
+  }
+
+  try {
+    await store.createTransaction({
+      type: 'expense',
+      amount: 1,
+      category_id: 1,
+      occurred_at: oldDate,
+      note: '应被拒绝',
+    })
+    throw new Error('old date should be rejected')
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes('近')) {
+      throw error
+    }
+  }
+
+  fs.rmSync(dataDir, { recursive: true, force: true })
   console.log('markdown store smoke ok')
-  console.log('data dir', store.dataDir)
 }
 
 void main()

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Category, TransactionInput, TxType } from '../../shared/types'
 import { errorMessage, todayIso } from '../lib/format'
+import { retentionCutoffIso } from '../../shared/retention'
 import { useAsync } from '../lib/useAsync'
 import { PageStatus } from '../components/ui'
 
@@ -12,11 +13,9 @@ interface RecordPageProps {
 
 export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps) {
   const categoriesQuery = useAsync(() => window.api.categories.list(), [])
-  const accountsQuery = useAsync(() => window.api.accounts.list(), [])
   const [type, setType] = useState<TxType>('expense')
   const [amount, setAmount] = useState('')
   const [categoryId, setCategoryId] = useState<number | null>(null)
-  const [accountId, setAccountId] = useState<number | null>(null)
   const [occurredAt, setOccurredAt] = useState(todayIso())
   const [note, setNote] = useState('')
   const [message, setMessage] = useState<string | null>(null)
@@ -34,7 +33,6 @@ export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps
       setType(tx.type)
       setAmount(String(tx.amount))
       setCategoryId(tx.category_id)
-      setAccountId(tx.account_id)
       setOccurredAt(tx.occurred_at)
       setNote(tx.note)
     })
@@ -46,14 +44,6 @@ export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps
     }
   }, [categories, categoryId])
 
-  useEffect(() => {
-    if (editingId != null) return
-    const accounts = accountsQuery.data ?? []
-    if (accounts.length > 0 && accountId == null) {
-      setAccountId(accounts[0].id)
-    }
-  }, [accountsQuery.data, accountId, editingId])
-
   async function onSubmit(event: FormEvent) {
     event.preventDefault()
     const parsed = Number.parseFloat(amount)
@@ -61,15 +51,18 @@ export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps
       setMessage('请输入大于 0 的金额')
       return
     }
-    if (categoryId == null || accountId == null) {
-      setMessage('请选择分类和账户')
+    if (categoryId == null) {
+      setMessage('请选择分类')
+      return
+    }
+    if (occurredAt < retentionCutoffIso()) {
+      setMessage(`只能记录近三年内的收支（${retentionCutoffIso()} 起）`)
       return
     }
     const payload: TransactionInput = {
       type,
       amount: parsed,
       category_id: categoryId,
-      account_id: accountId,
       occurred_at: occurredAt,
       note,
     }
@@ -93,10 +86,7 @@ export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps
   }
 
   return (
-    <PageStatus
-      loading={categoriesQuery.loading || accountsQuery.loading}
-      error={categoriesQuery.error ?? accountsQuery.error}
-    >
+    <PageStatus loading={categoriesQuery.loading} error={categoriesQuery.error}>
       <form className="record-card" onSubmit={onSubmit}>
         <div className="type-switch">
           <button type="button" className={type === 'expense' ? 'active expense' : ''} onClick={() => setType('expense')}>
@@ -138,22 +128,16 @@ export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps
           </div>
         </fieldset>
 
-        <div className="form-row">
-          <label>
-            账户
-            <select value={accountId ?? ''} onChange={(event) => setAccountId(Number(event.target.value))}>
-              {(accountsQuery.data ?? []).map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            日期
-            <input type="date" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} />
-          </label>
-        </div>
+        <label>
+          日期
+          <input
+            type="date"
+            min={retentionCutoffIso()}
+            max={todayIso()}
+            value={occurredAt}
+            onChange={(event) => setOccurredAt(event.target.value)}
+          />
+        </label>
 
         <label>
           备注

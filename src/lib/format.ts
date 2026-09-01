@@ -23,13 +23,6 @@ export function monthLabel(month: string): string {
   return `${year}年${Number.parseInt(m, 10)}月`
 }
 
-export const accountTypeLabels = {
-  cash: '现金',
-  wechat: '微信',
-  alipay: '支付宝',
-  bank: '银行卡',
-} as const
-
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return String(error)

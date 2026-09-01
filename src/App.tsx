@@ -12,7 +12,7 @@ const NAV: { id: PageId; label: string; caption: string }[] = [
   { id: 'record', label: '记一笔', caption: '快速入账' },
   { id: 'ledger', label: '流水', caption: '明细筛选' },
   { id: 'stats', label: '统计', caption: '分类趋势' },
-  { id: 'settings', label: '分类与账户', caption: '账本设置' },
+  { id: 'settings', label: '分类', caption: '账本设置' },
 ]
 
 export default function App() {
@@ -36,7 +36,7 @@ export default function App() {
     setEditingId(null)
     setRefreshToken((value) => value + 1)
     showToast(wasEdit ? '已保存修改' : '已记一笔')
-    setPage(wasEdit ? 'ledger' : 'overview')
+    if (wasEdit) setPage('ledger')
   }
 
   return (
@@ -81,7 +81,7 @@ export default function App() {
           ) : null}
           {page === 'record' ? (
             <RecordPage
-              key={`${editingId ?? 'new'}-${refreshToken}`}
+              key={editingId ?? 'new'}
               editingId={editingId}
               onSaved={afterSave}
               onCancelEdit={() => {

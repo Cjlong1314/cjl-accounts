@@ -2,12 +2,6 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { DesktopApi } from '../shared/api'
 
 const api: DesktopApi = {
-  accounts: {
-    list: () => ipcRenderer.invoke('accounts:list'),
-    create: (input) => ipcRenderer.invoke('accounts:create', input),
-    update: (account) => ipcRenderer.invoke('accounts:update', account),
-    delete: (id) => ipcRenderer.invoke('accounts:delete', id),
-  },
   categories: {
     list: () => ipcRenderer.invoke('categories:list'),
     create: (input) => ipcRenderer.invoke('categories:create', input),

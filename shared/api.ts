@@ -1,5 +1,4 @@
 import type {
-  Account,
   Category,
   MonthlyStats,
   OverviewStats,
@@ -10,12 +9,6 @@ import type {
 } from './types'
 
 export interface DesktopApi {
-  accounts: {
-    list(): Promise<Account[]>
-    create(input: Omit<Account, 'id'>): Promise<Account>
-    update(account: Account): Promise<Account>
-    delete(id: number): Promise<void>
-  }
   categories: {
     list(): Promise<Category[]>
     create(input: Omit<Category, 'id'>): Promise<Category>

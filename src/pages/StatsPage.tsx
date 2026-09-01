@@ -12,10 +12,9 @@ import {
   YAxis,
 } from 'recharts'
 import { currentMonth, formatMoney, monthLabel } from '../lib/format'
+import { PIE_COLORS } from '../lib/chartColors'
 import { useAsync } from '../lib/useAsync'
 import { EmptyState, PageStatus, Panel, StatCard } from '../components/ui'
-
-const PIE_COLORS = ['#1f7a63', '#3aa88a', '#7bc4ae', '#c46b4a', '#d7a15c', '#6b8ea1', '#8a7bb8', '#b07a8a']
 
 export function StatsPage() {
   const [month, setMonth] = useState(currentMonth())

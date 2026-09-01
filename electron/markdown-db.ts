@@ -1,9 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import type {
-  Account,
-  AccountBalance,
-  AccountType,
   Category,
   CategoryKind,
   CategorySlice,
@@ -16,10 +13,10 @@ import type {
   TransactionView,
   TxType,
 } from '../shared/types'
+import { isWithinRetention, RETENTION_YEARS, retentionCutoffIso } from '../shared/retention'
 
 type Row = Record<string, string>
 
-const ACCOUNT_TYPES: AccountType[] = ['cash', 'wechat', 'alipay', 'bank']
 const TX_TYPES: TxType[] = ['expense', 'income']
 const CATEGORY_KINDS: CategoryKind[] = ['expense', 'income']
 
@@ -102,11 +99,6 @@ function inMonth(occurredAt: string, year: number, monthIndex: number): boolean 
   return occurredAt >= monthStart(year, monthIndex) && occurredAt < nextMonthStart(year, monthIndex)
 }
 
-function assertAccountType(value: string): AccountType {
-  if (ACCOUNT_TYPES.includes(value as AccountType)) return value as AccountType
-  return 'cash'
-}
-
 function assertTxType(value: string): TxType {
   if (TX_TYPES.includes(value as TxType)) return value as TxType
   return 'expense'
@@ -119,7 +111,7 @@ function assertCategoryKind(value: string): CategoryKind {
 
 function copyIfMissing(sourceDir: string, targetDir: string): void {
   if (sourceDir === targetDir || !fs.existsSync(sourceDir)) return
-  for (const name of ['accounts.md', 'categories.md', 'transactions.md'] as const) {
+  for (const name of ['categories.md', 'transactions.md'] as const) {
     const target = path.join(targetDir, name)
     if (fs.existsSync(target)) continue
     const seed = path.join(sourceDir, name)
@@ -142,16 +134,13 @@ export class MarkdownStore {
     return this.dir
   }
 
-  private file(name: 'accounts' | 'categories' | 'transactions'): string {
+  private file(name: 'categories' | 'transactions'): string {
     return path.join(this.dir, `${name}.md`)
   }
 
   private ensureFiles(): void {
     fs.mkdirSync(this.dir, { recursive: true })
     copyIfMissing(this.seedDir, this.dir)
-    if (!fs.existsSync(this.file('accounts'))) {
-      this.writeAccounts(defaultAccounts())
-    }
     if (!fs.existsSync(this.file('categories'))) {
       this.writeCategories(defaultCategories())
     }
@@ -169,7 +158,7 @@ export class MarkdownStore {
     return result
   }
 
-  private readRows(name: 'accounts' | 'categories' | 'transactions'): Row[] {
+  private readRows(name: 'categories' | 'transactions'): Row[] {
     const content = fs.readFileSync(this.file(name), 'utf8')
     return parseMarkdownTable(content).rows
   }
@@ -178,16 +167,6 @@ export class MarkdownStore {
     const tmp = `${filePath}.tmp`
     fs.writeFileSync(tmp, content, 'utf8')
     fs.renameSync(tmp, filePath)
-  }
-
-  private writeAccounts(accounts: Account[]): void {
-    const rows = accounts.map((item) => ({
-      id: String(item.id),
-      name: item.name,
-      type: item.type,
-      initial_balance: item.initial_balance.toFixed(2),
-    }))
-    this.writeAtomic(this.file('accounts'), serializeMarkdownTable('账户', ['id', 'name', 'type', 'initial_balance'], rows))
   }
 
   private writeCategories(categories: Category[]): void {
@@ -206,40 +185,24 @@ export class MarkdownStore {
       type: item.type,
       amount: item.amount.toFixed(2),
       category_id: String(item.category_id),
-      account_id: String(item.account_id),
       occurred_at: item.occurred_at,
       note: item.note,
     }))
     this.writeAtomic(
       this.file('transactions'),
-      serializeMarkdownTable(
-        '流水',
-        ['id', 'type', 'amount', 'category_id', 'account_id', 'occurred_at', 'note'],
-        rows,
-      ),
+      serializeMarkdownTable('流水', ['id', 'type', 'amount', 'category_id', 'occurred_at', 'note'], rows),
     )
-  }
-
-  private loadAccounts(): Account[] {
-    return this.readRows('accounts')
-      .filter((row) => Number.isFinite(Number.parseInt(row.id, 10)))
-      .map((row) => ({
-      id: Number.parseInt(row.id, 10),
-      name: row.name,
-      type: assertAccountType(row.type),
-      initial_balance: toNumber(row.initial_balance),
-    }))
   }
 
   private loadCategories(): Category[] {
     return this.readRows('categories')
       .filter((row) => Number.isFinite(Number.parseInt(row.id, 10)))
       .map((row) => ({
-      id: Number.parseInt(row.id, 10),
-      name: row.name,
-      kind: assertCategoryKind(row.kind),
-      icon: row.icon,
-    }))
+        id: Number.parseInt(row.id, 10),
+        name: row.name,
+        kind: assertCategoryKind(row.kind),
+        icon: row.icon,
+      }))
   }
 
   private loadTransactions(): Transaction[] {
@@ -250,7 +213,6 @@ export class MarkdownStore {
         type: assertTxType(row.type),
         amount: toNumber(row.amount),
         category_id: Number.parseInt(row.category_id, 10),
-        account_id: Number.parseInt(row.account_id, 10),
         occurred_at: row.occurred_at,
         note: row.note ?? '',
       }))
@@ -260,79 +222,13 @@ export class MarkdownStore {
       })
   }
 
-  private toView(tx: Transaction, categories: Category[], accounts: Account[]): TransactionView {
+  private toView(tx: Transaction, categories: Category[]): TransactionView {
     const category = categories.find((item) => item.id === tx.category_id)
-    const account = accounts.find((item) => item.id === tx.account_id)
     return {
       ...tx,
       category_name: category?.name ?? '未分类',
       category_icon: category?.icon ?? '记',
-      account_name: account?.name ?? '未知账户',
     }
-  }
-
-  private accountBalances(accounts: Account[], transactions: Transaction[]): AccountBalance[] {
-    return accounts.map((account) => {
-      const delta = transactions.reduce((sum, tx) => {
-        if (tx.account_id !== account.id) return sum
-        return tx.type === 'income' ? sum + tx.amount : sum - tx.amount
-      }, 0)
-      return {
-        id: account.id,
-        name: account.name,
-        type: account.type,
-        balance: account.initial_balance + delta,
-      }
-    })
-  }
-
-  listAccounts(): Promise<Account[]> {
-    return this.run(() => this.loadAccounts())
-  }
-
-  createAccount(input: Omit<Account, 'id'>): Promise<Account> {
-    return this.run(() => {
-      const accounts = this.loadAccounts()
-      if (accounts.some((item) => item.name === input.name.trim())) {
-        throw new Error('已存在同名账户')
-      }
-      const account: Account = {
-        id: nextId(accounts),
-        name: input.name.trim(),
-        type: input.type,
-        initial_balance: input.initial_balance,
-      }
-      this.writeAccounts([...accounts, account])
-      return account
-    })
-  }
-
-  updateAccount(account: Account): Promise<Account> {
-    return this.run(() => {
-      const accounts = this.loadAccounts()
-      if (accounts.some((item) => item.name === account.name.trim() && item.id !== account.id)) {
-        throw new Error('已存在同名账户')
-      }
-      const next = accounts.map((item) =>
-        item.id === account.id
-          ? { ...account, name: account.name.trim() }
-          : item,
-      )
-      if (!next.some((item) => item.id === account.id)) {
-        throw new Error('账户不存在')
-      }
-      this.writeAccounts(next)
-      return next.find((item) => item.id === account.id)!
-    })
-  }
-
-  deleteAccount(id: number): Promise<void> {
-    return this.run(() => {
-      const used = this.loadTransactions().some((tx) => tx.account_id === id)
-      if (used) throw new Error('该账户已有流水，无法删除')
-      const accounts = this.loadAccounts().filter((item) => item.id !== id)
-      this.writeAccounts(accounts)
-    })
   }
 
   listCategories(): Promise<Category[]> {
@@ -390,7 +286,6 @@ export class MarkdownStore {
   listTransactions(filter: TransactionFilter = {}): Promise<TransactionView[]> {
     return this.run(() => {
       const categories = this.loadCategories()
-      const accounts = this.loadAccounts()
       return this.loadTransactions()
         .filter((tx) => {
           if (filter.start && tx.occurred_at < filter.start) return false
@@ -399,12 +294,9 @@ export class MarkdownStore {
           if (filter.category_id && filter.category_id !== 'all' && tx.category_id !== filter.category_id) {
             return false
           }
-          if (filter.account_id && filter.account_id !== 'all' && tx.account_id !== filter.account_id) {
-            return false
-          }
           return true
         })
-        .map((tx) => this.toView(tx, categories, accounts))
+        .map((tx) => this.toView(tx, categories))
     })
   }
 
@@ -412,7 +304,7 @@ export class MarkdownStore {
     return this.run(() => {
       const tx = this.loadTransactions().find((item) => item.id === id)
       if (!tx) return null
-      return this.toView(tx, this.loadCategories(), this.loadAccounts())
+      return this.toView(tx, this.loadCategories())
     })
   }
 
@@ -426,12 +318,12 @@ export class MarkdownStore {
 
   private saveTransaction(id: number | undefined, input: TransactionInput): Transaction {
     if (!(input.amount > 0)) throw new Error('金额必须大于 0')
+    if (!isWithinRetention(input.occurred_at)) {
+      throw new Error(`只能记录近 ${RETENTION_YEARS} 年内的收支（${retentionCutoffIso()} 起）`)
+    }
     const categories = this.loadCategories()
-    const accounts = this.loadAccounts()
     const category = categories.find((item) => item.id === input.category_id)
-    const account = accounts.find((item) => item.id === input.account_id)
     if (!category) throw new Error('分类不存在')
-    if (!account) throw new Error('账户不存在')
     if (category.kind !== input.type) throw new Error('分类与收支类型不匹配')
     const transactions = this.loadTransactions()
     const record: Transaction = {
@@ -439,7 +331,6 @@ export class MarkdownStore {
       type: input.type,
       amount: Math.round(input.amount * 100) / 100,
       category_id: input.category_id,
-      account_id: input.account_id,
       occurred_at: input.occurred_at,
       note: input.note.trim(),
     }
@@ -459,13 +350,22 @@ export class MarkdownStore {
     })
   }
 
+  purgeExpiredTransactions(now = new Date()): Promise<number> {
+    return this.run(() => {
+      const transactions = this.loadTransactions()
+      const kept = transactions.filter((tx) => isWithinRetention(tx.occurred_at, now))
+      const removed = transactions.length - kept.length
+      if (removed > 0) this.writeTransactions(kept)
+      return removed
+    })
+  }
+
   getOverview(): Promise<OverviewStats> {
     return this.run(() => {
       const now = new Date()
       const year = now.getFullYear()
       const monthIndex = now.getMonth()
       const categories = this.loadCategories()
-      const accounts = this.loadAccounts()
       const transactions = this.loadTransactions()
       const monthTx = transactions.filter((tx) => inMonth(tx.occurred_at, year, monthIndex))
       const monthIncome = sumBy(monthTx, 'income')
@@ -486,11 +386,10 @@ export class MarkdownStore {
         monthIncome,
         monthExpense,
         monthBalance: monthIncome - monthExpense,
-        totalBalance: this.accountBalances(accounts, transactions).reduce((sum, item) => sum + item.balance, 0),
+        totalBalance: sumBy(transactions, 'income') - sumBy(transactions, 'expense'),
         last6Months,
         categoryBreakdown: slices(monthTx, 'expense', categories),
-        recent: transactions.slice(0, 8).map((tx) => this.toView(tx, categories, accounts)),
-        accounts: this.accountBalances(accounts, transactions),
+        recent: transactions.slice(0, 8).map((tx) => this.toView(tx, categories)),
       }
     })
   }
@@ -548,15 +447,6 @@ function slices(transactions: Transaction[], type: TxType, categories: Category[
       }
     })
     .sort((a, b) => b.amount - a.amount)
-}
-
-function defaultAccounts(): Account[] {
-  return [
-    { id: 1, name: '现金', type: 'cash', initial_balance: 0 },
-    { id: 2, name: '微信', type: 'wechat', initial_balance: 0 },
-    { id: 3, name: '支付宝', type: 'alipay', initial_balance: 0 },
-    { id: 4, name: '银行卡', type: 'bank', initial_balance: 0 },
-  ]
 }
 
 function defaultCategories(): Category[] {

@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { MarkdownStore } from './markdown-db'
-import type { Account, Category, TransactionFilter, TransactionInput } from '../shared/types'
+import type { Category, TransactionFilter, TransactionInput } from '../shared/types'
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
@@ -52,14 +52,13 @@ function wrap<T>(fn: () => Promise<T>): Promise<T> {
   return fn()
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   const { dir, seedDir } = resolveDataDir()
   store = new MarkdownStore(dir, seedDir)
-
-  ipcMain.handle('accounts:list', () => wrap(() => store.listAccounts()))
-  ipcMain.handle('accounts:create', (_event, input: Omit<Account, 'id'>) => wrap(() => store.createAccount(input)))
-  ipcMain.handle('accounts:update', (_event, account: Account) => wrap(() => store.updateAccount(account)))
-  ipcMain.handle('accounts:delete', (_event, id: number) => wrap(() => store.deleteAccount(id)))
+  const removed = await store.purgeExpiredTransactions()
+  if (removed > 0) {
+    console.log(`[记账本] 已删除 ${removed} 条超过近三年的流水`)
+  }
 
   ipcMain.handle('categories:list', () => wrap(() => store.listCategories()))
   ipcMain.handle('categories:create', (_event, input: Omit<Category, 'id'>) => wrap(() => store.createCategory(input)))
