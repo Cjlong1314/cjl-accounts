@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import { MarkdownStore } from './markdown-db'
-import type { Category, TransactionFilter, TransactionInput } from '../shared/types'
+import type { Category, StatsRange, TransactionFilter, TransactionInput } from '../shared/types'
 
 process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
 
@@ -79,6 +79,7 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('stats:overview', () => wrap(() => store.getOverview()))
   ipcMain.handle('stats:monthly', (_event, month: string) => wrap(() => store.getMonthlyStats(month)))
+  ipcMain.handle('stats:range', (_event, range: StatsRange) => wrap(() => store.getRangeStats(range)))
   ipcMain.handle('meta:dataDir', () => store.dataDir)
 
   createWindow()

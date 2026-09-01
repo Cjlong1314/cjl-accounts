@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { RangeStats, StatsRange } from '../../shared/types'
 import {
   Bar,
   BarChart,
@@ -12,63 +13,88 @@ import {
   YAxis,
 } from 'recharts'
 import { CategoryIcon } from '../lib/CategoryIcon'
-import { currentMonth, formatMoney, monthLabel } from '../lib/format'
+import { formatMoney, monthLabel } from '../lib/format'
 import { PIE_COLORS } from '../lib/chartColors'
 import { useAsync } from '../lib/useAsync'
 import { EmptyState, PageStatus, Panel, StatCard } from '../components/ui'
 
+const RANGE_OPTIONS: { value: StatsRange; label: string }[] = [
+  { value: 'month', label: '本月度' },
+  { value: '3months', label: '近三月' },
+  { value: '6months', label: '近六月' },
+  { value: 'year', label: '近一年' },
+]
+
 export function StatsPage() {
-  const [month, setMonth] = useState(currentMonth())
-  const { data, loading, error } = useAsync(() => window.api.stats.monthly(month), [month])
+  const [range, setRange] = useState<StatsRange>('month')
+  const { data, loading, error } = useAsync(() => window.api.stats.range(range), [range])
 
   return (
     <div className="page-stack">
-      <div className="month-picker">
-        <label>
-          统计月份
-          <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
-        </label>
+      <div className="stats-toolbar">
+        <div>
+          <p className="toolbar-label">统计范围</p>
+          <p className="toolbar-hint">按时间范围查看收入、支出和分类趋势</p>
+        </div>
+        <div className="range-switch" role="tablist" aria-label="统计范围">
+          {RANGE_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={range === option.value}
+              className={range === option.value ? 'range-btn active' : 'range-btn'}
+              onClick={() => setRange(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <PageStatus loading={loading} error={error}>
-        {data ? (
-          <>
-            <div className="stat-grid three">
-              <StatCard label={`${monthLabel(month)}收入`} value={data.income} tone="income" />
-              <StatCard label={`${monthLabel(month)}支出`} value={data.expense} tone="expense" />
-              <StatCard label="结余" value={data.balance} />
-            </div>
-
-            <Panel title="近 6 个月趋势">
-              <div className="chart-box">
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={data.trend}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dce7e2" />
-                    <XAxis dataKey="month" tickFormatter={monthLabel} tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      formatter={(value) => formatMoney(Number(value))}
-                      labelFormatter={(label) => monthLabel(String(label))}
-                    />
-                    <Bar dataKey="income" name="收入" fill="#1f7a63" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="expense" name="支出" fill="#c46b4a" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </Panel>
-
-            <div className="split-grid">
-              <Panel title="支出分类">
-                <CategoryList items={data.expenseByCategory} empty="本月没有支出" />
-              </Panel>
-              <Panel title="收入分类">
-                <CategoryList items={data.incomeByCategory} empty="本月没有收入" />
-              </Panel>
-            </div>
-          </>
-        ) : null}
+        {data ? <StatsContent data={data} /> : null}
       </PageStatus>
     </div>
+  )
+}
+
+function StatsContent({ data }: { data: RangeStats }) {
+  return (
+    <>
+      <div className="stat-grid three">
+        <StatCard label={data.label + '收入'} value={data.income} tone="income" />
+        <StatCard label={data.label + '支出'} value={data.expense} tone="expense" />
+        <StatCard label="结余" value={data.balance} />
+      </div>
+
+      <Panel title={data.label + '趋势'}>
+        <div className="chart-box">
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={data.trend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dce7e2" />
+              <XAxis dataKey="month" tickFormatter={monthLabel} tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip
+                formatter={(value) => formatMoney(Number(value))}
+                labelFormatter={(label) => monthLabel(String(label))}
+              />
+              <Bar dataKey="income" name="收入" fill="#1f7a63" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" name="支出" fill="#c46b4a" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Panel>
+
+      <div className="split-grid">
+        <Panel title="支出分类">
+          <CategoryList items={data.expenseByCategory} empty={data.label + '没有支出'} />
+        </Panel>
+        <Panel title="收入分类">
+          <CategoryList items={data.incomeByCategory} empty={data.label + '没有收入'} />
+        </Panel>
+      </div>
+    </>
   )
 }
 
@@ -99,7 +125,7 @@ function CategoryList({
             <span className="dot" style={{ background: PIE_COLORS[index % PIE_COLORS.length] }} />
             <CategoryIcon icon={item.icon} size={14} /> {item.name}
             <strong>
-              {formatMoney(item.amount)} · {total === 0 ? '0%' : `${Math.round((item.amount / total) * 100)}%`}
+              {formatMoney(item.amount)} · {total === 0 ? '0%' : Math.round((item.amount / total) * 100) + '%'}
             </strong>
           </li>
         ))}

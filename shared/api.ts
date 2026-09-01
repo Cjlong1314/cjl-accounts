@@ -2,6 +2,8 @@ import type {
   Category,
   MonthlyStats,
   OverviewStats,
+  RangeStats,
+  StatsRange,
   Transaction,
   TransactionFilter,
   TransactionInput,
@@ -25,6 +27,7 @@ export interface DesktopApi {
   stats: {
     overview(): Promise<OverviewStats>
     monthly(month: string): Promise<MonthlyStats>
+    range(range: StatsRange): Promise<RangeStats>
   }
   meta: {
     dataDir(): Promise<string>

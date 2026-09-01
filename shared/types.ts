@@ -1,5 +1,6 @@
 export type TxType = 'expense' | 'income'
 export type CategoryKind = 'expense' | 'income'
+export type StatsRange = 'month' | '3months' | '6months' | 'year'
 
 export interface Category {
   id: number
@@ -57,6 +58,19 @@ export interface OverviewStats {
   last6Months: MonthPoint[]
   categoryBreakdown: CategorySlice[]
   recent: TransactionView[]
+}
+
+export interface RangeStats {
+  range: StatsRange
+  label: string
+  from: string
+  to: string
+  income: number
+  expense: number
+  balance: number
+  trend: MonthPoint[]
+  expenseByCategory: CategorySlice[]
+  incomeByCategory: CategorySlice[]
 }
 
 export interface MonthlyStats {

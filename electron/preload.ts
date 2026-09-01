@@ -18,6 +18,7 @@ const api: DesktopApi = {
   stats: {
     overview: () => ipcRenderer.invoke('stats:overview'),
     monthly: (month) => ipcRenderer.invoke('stats:monthly', month),
+    range: (range) => ipcRenderer.invoke('stats:range', range),
   },
   meta: {
     dataDir: () => ipcRenderer.invoke('meta:dataDir'),

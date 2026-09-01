@@ -659,6 +659,24 @@ select {
   box-shadow: var(--shadow);
 }
 
+@media (max-width: 700px) {
+.stats-toolbar {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.range-switch {
+  width: 100%;
+}
+
+.range-btn {
+  flex: 1;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+}
+
 @media (max-width: 1100px) {
   .stat-grid,
   .split-grid,

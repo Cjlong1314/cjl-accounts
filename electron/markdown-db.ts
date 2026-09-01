@@ -411,6 +411,38 @@ export class MarkdownStore {
     })
   }
 
+  getRangeStats(range: StatsRange): Promise<RangeStats> {
+    return this.run(() => {
+      const config = rangeConfig(range)
+      const categories = this.loadCategories()
+      const transactions = this.loadTransactions()
+      const rangeTx = transactions.filter((tx) => tx.occurred_at >= config.from && tx.occurred_at <= config.to)
+      const trend: MonthPoint[] = []
+      for (let offset = config.months - 1; offset >= 0; offset -= 1) {
+        const date = new Date(config.now.getFullYear(), config.now.getMonth() - offset, 1)
+        const slice = transactions.filter((tx) => inMonth(tx.occurred_at, date.getFullYear(), date.getMonth()))
+        trend.push({
+          month: monthKey(date),
+          income: sumBy(slice, 'income'),
+          expense: sumBy(slice, 'expense'),
+        })
+      }
+      const income = sumBy(rangeTx, 'income')
+      const expense = sumBy(rangeTx, 'expense')
+      return {
+        range,
+        label: config.label,
+        from: config.from,
+        to: config.to,
+        income,
+        expense,
+        balance: income - expense,
+        trend,
+        expenseByCategory: slices(rangeTx, 'expense', categories),
+        incomeByCategory: slices(rangeTx, 'income', categories),
+      }
+    })
+  }
   getMonthlyStats(month: string): Promise<MonthlyStats> {
     return this.run(() => {
       const [yearText, monthText] = month.split('-')
@@ -444,6 +476,19 @@ export class MarkdownStore {
   }
 }
 
+function rangeConfig(range: StatsRange, now = new Date()): { months: number; label: string; from: string; to: string; now: Date } {
+  const settings: Record<StatsRange, { months: number; label: string }> = {
+    month: { months: 1, label: '本月度' },
+    '3months': { months: 3, label: '近三月' },
+    '6months': { months: 6, label: '近六月' },
+    year: { months: 12, label: '近一年' },
+  }
+  const setting = settings[range] ?? settings.month
+  const fromDate = new Date(now.getFullYear(), now.getMonth() - setting.months + 1, 1)
+  const from = monthStart(fromDate.getFullYear(), fromDate.getMonth())
+  const to = String(now.getFullYear()) + '-' + pad2(now.getMonth() + 1) + '-' + pad2(now.getDate())
+  return { ...setting, from, to, now }
+}
 function sumBy(transactions: Transaction[], type: TxType): number {
   return transactions.reduce((sum, tx) => (tx.type === type ? sum + tx.amount : sum), 0)
 }
