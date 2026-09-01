@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CategoryIcon } from '../lib/CategoryIcon'
 import { errorMessage, formatMoney, todayIso } from '../lib/format'
 import { useAsync } from '../lib/useAsync'
 import { EmptyState, PageStatus, Panel } from '../components/ui'
@@ -120,7 +121,12 @@ export function LedgerPage({ onEdit }: LedgerPageProps) {
                     <tr key={tx.id}>
                       <td>{tx.occurred_at}</td>
                       <td>
-                        {tx.category_icon} {tx.category_name}
+                        <span className="category-inline">
+                          <span className="tx-icon compact">
+                            <CategoryIcon icon={tx.category_icon} size={16} />
+                          </span>
+                          {tx.category_name}
+                        </span>
                       </td>
                       <td className="note">{tx.note || '—'}</td>
                       <td className={tx.type === 'income' ? 'num amount income' : 'num amount expense'}>

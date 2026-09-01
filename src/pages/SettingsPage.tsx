@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import type { Category, CategoryKind } from '../../shared/types'
+import { DEFAULT_CATEGORY_ICON } from '../../shared/categoryIcons'
 import { errorMessage } from '../lib/format'
+import { CATEGORY_ICON_OPTIONS, CategoryIcon } from '../lib/CategoryIcon'
 import { useAsync } from '../lib/useAsync'
 import { EmptyState, PageStatus, Panel } from '../components/ui'
 
@@ -52,7 +54,7 @@ function CategoryEditor({
   onChanged: () => void
 }) {
   const [name, setName] = useState('')
-  const [icon, setIcon] = useState('')
+  const [icon, setIcon] = useState(DEFAULT_CATEGORY_ICON)
   const [editing, setEditing] = useState<Category | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -61,12 +63,12 @@ function CategoryEditor({
     setMessage(null)
     try {
       if (editing) {
-        await window.api.categories.update({ ...editing, name, icon: icon || '记' })
+        await window.api.categories.update({ ...editing, name, icon })
       } else {
-        await window.api.categories.create({ name, kind, icon: icon || '记' })
+        await window.api.categories.create({ name, kind, icon })
       }
       setName('')
-      setIcon('')
+      setIcon(DEFAULT_CATEGORY_ICON)
       setEditing(null)
       onChanged()
     } catch (error) {
@@ -90,7 +92,9 @@ function CategoryEditor({
       <ul className="manage-list">
         {categories.map((item) => (
           <li key={item.id}>
-            <span className="tx-icon">{item.icon}</span>
+            <span className="tx-icon">
+              <CategoryIcon icon={item.icon} />
+            </span>
             <strong>{item.name}</strong>
             <button
               type="button"
@@ -111,7 +115,19 @@ function CategoryEditor({
       </ul>
       <form className="inline-form" onSubmit={save}>
         <input placeholder="分类名" value={name} onChange={(event) => setName(event.target.value)} required />
-        <input placeholder="图标字" maxLength={2} value={icon} onChange={(event) => setIcon(event.target.value)} />
+        <div className="icon-picker" role="listbox" aria-label="分类图标">
+          {CATEGORY_ICON_OPTIONS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              className={icon === id ? 'icon-pick active' : 'icon-pick'}
+              onClick={() => setIcon(id)}
+              title={id}
+            >
+              <CategoryIcon icon={id} size={18} />
+            </button>
+          ))}
+        </div>
         <button type="submit" className="primary-btn compact">
           {editing ? '保存' : '新增'}
         </button>
@@ -122,7 +138,7 @@ function CategoryEditor({
             onClick={() => {
               setEditing(null)
               setName('')
-              setIcon('')
+              setIcon(DEFAULT_CATEGORY_ICON)
             }}
           >
             取消

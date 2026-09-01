@@ -289,6 +289,11 @@ select {
   flex: none;
 }
 
+.tx-icon svg,
+.chip svg {
+  display: block;
+}
+
 .tx-main {
   display: flex;
   flex-direction: column;
@@ -513,8 +518,14 @@ select {
 .ledger-table td {
   text-align: left;
   padding: 10px 8px;
-  border-bottom: 1px solid #eef3f0;
+  border: 0;
   font-size: 14px;
+  vertical-align: middle;
+}
+
+.ledger-table thead tr,
+.ledger-table tbody tr {
+  border-bottom: 1px solid #eef3f0;
 }
 
 .ledger-table .num,
@@ -529,6 +540,43 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
+}
+
+.category-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tx-icon.compact {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.icon-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.icon-pick {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  background: #f8fbf9;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--pine-dark);
+  padding: 0;
+}
+
+.icon-pick.active {
+  border-color: var(--pine);
+  background: #e8f6f0;
 }
 
 .pager {

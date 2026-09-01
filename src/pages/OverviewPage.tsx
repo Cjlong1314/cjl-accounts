@@ -1,6 +1,7 @@
 import { useAsync } from '../lib/useAsync'
 import { PIE_COLORS } from '../lib/chartColors'
 import { formatMoney, monthLabel } from '../lib/format'
+import { CategoryIcon } from '../lib/CategoryIcon'
 import { EmptyState, PageStatus, Panel, StatCard } from '../components/ui'
 import {
   Bar,
@@ -83,7 +84,7 @@ export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
                     {data.categoryBreakdown.map((item, index) => (
                       <li key={item.name}>
                         <span className="dot" style={{ background: PIE_COLORS[index % PIE_COLORS.length] }} />
-                        {item.icon} {item.name}
+                        <CategoryIcon icon={item.icon} size={14} /> {item.name}
                         <strong>{formatMoney(item.amount)}</strong>
                       </li>
                     ))}
@@ -108,7 +109,9 @@ export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
                 {data.recent.map((tx) => (
                   <li key={tx.id}>
                     <button type="button" className="tx-row" onClick={() => onEdit(tx.id)}>
-                      <span className="tx-icon">{tx.category_icon}</span>
+                      <span className="tx-icon">
+                        <CategoryIcon icon={tx.category_icon} />
+                      </span>
                       <span className="tx-main">
                         <strong>{tx.category_name}</strong>
                         <small>

@@ -1,6 +1,6 @@
 # 记账本
 
-个人/家庭日常记账 Windows 桌面应用。账本不是 SQLite，而是项目里的 Markdown 文件。
+个人/家庭日常记账 Windows 桌面应用。账本是项目里的 Markdown 文件。
 
 ## 数据文件
 

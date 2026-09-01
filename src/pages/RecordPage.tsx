@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Category, TransactionInput, TxType } from '../../shared/types'
+import { CategoryIcon } from '../lib/CategoryIcon'
 import { errorMessage, todayIso } from '../lib/format'
 import { retentionCutoffIso } from '../../shared/retention'
 import { useAsync } from '../lib/useAsync'
@@ -121,7 +122,7 @@ export function RecordPage({ editingId, onSaved, onCancelEdit }: RecordPageProps
                 className={categoryId === item.id ? 'chip active' : 'chip'}
                 onClick={() => setCategoryId(item.id)}
               >
-                <span>{item.icon}</span>
+                <CategoryIcon icon={item.icon} size={20} />
                 {item.name}
               </button>
             ))}

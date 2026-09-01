@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { CategoryIcon } from '../lib/CategoryIcon'
 import { currentMonth, formatMoney, monthLabel } from '../lib/format'
 import { PIE_COLORS } from '../lib/chartColors'
 import { useAsync } from '../lib/useAsync'
@@ -96,7 +97,7 @@ function CategoryList({
         {items.map((item, index) => (
           <li key={item.name}>
             <span className="dot" style={{ background: PIE_COLORS[index % PIE_COLORS.length] }} />
-            {item.icon} {item.name}
+            <CategoryIcon icon={item.icon} size={14} /> {item.name}
             <strong>
               {formatMoney(item.amount)} · {total === 0 ? '0%' : `${Math.round((item.amount / total) * 100)}%`}
             </strong>

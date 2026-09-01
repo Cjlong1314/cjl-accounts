@@ -14,6 +14,7 @@ import type {
   TxType,
 } from '../shared/types'
 import { isWithinRetention, RETENTION_YEARS, retentionCutoffIso } from '../shared/retention'
+import { DEFAULT_CATEGORY_ICON, normalizeCategoryIcon } from '../shared/categoryIcons'
 
 type Row = Record<string, string>
 
@@ -143,6 +144,8 @@ export class MarkdownStore {
     copyIfMissing(this.seedDir, this.dir)
     if (!fs.existsSync(this.file('categories'))) {
       this.writeCategories(defaultCategories())
+    } else {
+      this.migrateCategoryIcons()
     }
     if (!fs.existsSync(this.file('transactions'))) {
       this.writeTransactions([])
@@ -194,7 +197,14 @@ export class MarkdownStore {
     )
   }
 
-  private loadCategories(): Category[] {
+  private migrateCategoryIcons(): void {
+    const categories = this.loadCategoriesRaw()
+    const next = categories.map((item) => ({ ...item, icon: normalizeCategoryIcon(item.icon) }))
+    const changed = next.some((item, index) => item.icon !== categories[index]?.icon)
+    if (changed) this.writeCategories(next)
+  }
+
+  private loadCategoriesRaw(): Category[] {
     return this.readRows('categories')
       .filter((row) => Number.isFinite(Number.parseInt(row.id, 10)))
       .map((row) => ({
@@ -203,6 +213,13 @@ export class MarkdownStore {
         kind: assertCategoryKind(row.kind),
         icon: row.icon,
       }))
+  }
+
+  private loadCategories(): Category[] {
+    return this.loadCategoriesRaw().map((item) => ({
+      ...item,
+      icon: normalizeCategoryIcon(item.icon),
+    }))
   }
 
   private loadTransactions(): Transaction[] {
@@ -227,7 +244,7 @@ export class MarkdownStore {
     return {
       ...tx,
       category_name: category?.name ?? '未分类',
-      category_icon: category?.icon ?? '记',
+      category_icon: category?.icon ?? DEFAULT_CATEGORY_ICON,
     }
   }
 
@@ -245,7 +262,7 @@ export class MarkdownStore {
         id: nextId(categories),
         name: input.name.trim(),
         kind: input.kind,
-        icon: input.icon.trim() || '记',
+        icon: normalizeCategoryIcon(input.icon),
       }
       this.writeCategories([...categories, category])
       return category
@@ -264,7 +281,7 @@ export class MarkdownStore {
       }
       const next = categories.map((item) =>
         item.id === category.id
-          ? { ...category, name: category.name.trim(), icon: category.icon.trim() || '记' }
+          ? { ...category, name: category.name.trim(), icon: normalizeCategoryIcon(category.icon) }
           : item,
       )
       if (!next.some((item) => item.id === category.id)) {
@@ -442,7 +459,7 @@ function slices(transactions: Transaction[], type: TxType, categories: Category[
       const category = categories.find((item) => item.id === id)
       return {
         name: category?.name ?? '未分类',
-        icon: category?.icon ?? '记',
+        icon: category?.icon ?? DEFAULT_CATEGORY_ICON,
         amount,
       }
     })
@@ -451,19 +468,19 @@ function slices(transactions: Transaction[], type: TxType, categories: Category[
 
 function defaultCategories(): Category[] {
   return [
-    { id: 1, name: '餐饮', kind: 'expense', icon: '餐' },
-    { id: 2, name: '交通', kind: 'expense', icon: '行' },
-    { id: 3, name: '购物', kind: 'expense', icon: '购' },
-    { id: 4, name: '居住', kind: 'expense', icon: '住' },
-    { id: 5, name: '娱乐', kind: 'expense', icon: '乐' },
-    { id: 6, name: '医疗', kind: 'expense', icon: '医' },
-    { id: 7, name: '教育', kind: 'expense', icon: '学' },
-    { id: 8, name: '日用', kind: 'expense', icon: '用' },
-    { id: 9, name: '其他', kind: 'expense', icon: '其' },
-    { id: 10, name: '工资', kind: 'income', icon: '薪' },
-    { id: 11, name: '奖金', kind: 'income', icon: '奖' },
-    { id: 12, name: '理财', kind: 'income', icon: '利' },
-    { id: 13, name: '红包', kind: 'income', icon: '红' },
-    { id: 14, name: '其他', kind: 'income', icon: '入' },
+    { id: 1, name: '餐饮', kind: 'expense', icon: 'utensils-crossed' },
+    { id: 2, name: '交通', kind: 'expense', icon: 'bus' },
+    { id: 3, name: '购物', kind: 'expense', icon: 'shopping-bag' },
+    { id: 4, name: '居住', kind: 'expense', icon: 'house' },
+    { id: 5, name: '娱乐', kind: 'expense', icon: 'gamepad-2' },
+    { id: 6, name: '医疗', kind: 'expense', icon: 'heart-pulse' },
+    { id: 7, name: '教育', kind: 'expense', icon: 'graduation-cap' },
+    { id: 8, name: '日用', kind: 'expense', icon: 'package' },
+    { id: 9, name: '其他', kind: 'expense', icon: 'ellipsis' },
+    { id: 10, name: '工资', kind: 'income', icon: 'wallet' },
+    { id: 11, name: '奖金', kind: 'income', icon: 'trophy' },
+    { id: 12, name: '理财', kind: 'income', icon: 'trending-up' },
+    { id: 13, name: '红包', kind: 'income', icon: 'gift' },
+    { id: 14, name: '其他', kind: 'income', icon: 'coins' },
   ]
 }
