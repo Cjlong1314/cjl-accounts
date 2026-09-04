@@ -13,8 +13,8 @@ import {
   YAxis,
 } from 'recharts'
 import { CategoryIcon } from '../lib/CategoryIcon'
-import { formatMoney, monthLabel } from '../lib/format'
-import { PIE_COLORS } from '../lib/chartColors'
+import { formatMoney, monthLabel, shortMonthLabel, axisMoney } from '../lib/format'
+import { PIE_COLORS, groupSmallSlices } from '../lib/chartColors'
 import { useAsync } from '../lib/useAsync'
 import { EmptyState, PageStatus, Panel, StatCard } from '../components/ui'
 
@@ -70,17 +70,17 @@ function StatsContent({ data }: { data: RangeStats }) {
 
       <Panel title={data.label + '趋势'}>
         <div className="chart-box">
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={data.trend}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.trend} barCategoryGap="22%" barGap={3} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dce7e2" />
-              <XAxis dataKey="month" tickFormatter={monthLabel} tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
+              <XAxis dataKey="month" tickFormatter={shortMonthLabel} tick={{ fontSize: 11 }} interval={0} />
+              <YAxis tickFormatter={axisMoney} tick={{ fontSize: 11 }} width={36} />
               <Tooltip
                 formatter={(value) => formatMoney(Number(value))}
                 labelFormatter={(label) => monthLabel(String(label))}
               />
-              <Bar dataKey="income" name="收入" fill="#1f7a63" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expense" name="支出" fill="#c46b4a" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="income" name="收入" fill="#1f7a63" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              <Bar dataKey="expense" name="支出" fill="#c46b4a" radius={[4, 4, 0, 0]} maxBarSize={28} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -107,23 +107,29 @@ function CategoryList({
 }) {
   if (items.length === 0) return <EmptyState text={empty} />
   const total = items.reduce((sum, item) => sum + item.amount, 0)
+  const pieData = groupSmallSlices(items)
   return (
     <div className="pie-layout">
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart>
-          <Pie data={items} dataKey="amount" nameKey="name" innerRadius={46} outerRadius={76} paddingAngle={2}>
-            {items.map((item, index) => (
-              <Cell key={item.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value) => formatMoney(Number(value))} />
-        </PieChart>
-      </ResponsiveContainer>
+      <div className="chart-box pie-chart">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={pieData} dataKey="amount" nameKey="name" innerRadius="42%" outerRadius="70%" paddingAngle={2}>
+              {pieData.map((item, index) => (
+                <Cell key={item.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value) => formatMoney(Number(value))} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
       <ul className="legend-list">
-        {items.map((item, index) => (
+        {pieData.map((item, index) => (
           <li key={item.name}>
             <span className="dot" style={{ background: PIE_COLORS[index % PIE_COLORS.length] }} />
-            <CategoryIcon icon={item.icon} size={14} /> {item.name}
+            <span className="legend-name">
+              <CategoryIcon icon={item.icon} size={14} />
+              {item.name}
+            </span>
             <strong>
               {formatMoney(item.amount)} · {total === 0 ? '0%' : Math.round((item.amount / total) * 100) + '%'}
             </strong>

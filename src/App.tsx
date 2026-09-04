@@ -71,9 +71,11 @@ export default function App() {
       <main className="main-pane">
         <header className="topbar">
           <h1>{NAV.find((item) => item.id === page)?.label}</h1>
-          <button type="button" className="primary-btn" onClick={() => goRecord()}>
-            记一笔
-          </button>
+          {page === 'record' ? null : (
+            <button type="button" className="primary-btn topbar-record" onClick={() => goRecord()}>
+              记一笔
+            </button>
+          )}
         </header>
         <div className="content">
           {page === 'overview' ? (

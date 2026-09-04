@@ -2,19 +2,46 @@ import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import type { DesktopApi } from '../../shared/api'
 import { MarkdownStore, type LedgerFileBackend, type LedgerFileName } from '../../shared/markdownStore'
+import categoriesSeed from '../../data/categories.md?raw'
+import transactionsSeed from '../../data/transactions.md?raw'
 
 const FILES: LedgerFileName[] = ['categories', 'transactions']
 const STORAGE_PREFIX = 'cjl-accounts:'
+const SEED: Record<LedgerFileName, string> = {
+  categories: categoriesSeed,
+  transactions: transactionsSeed,
+}
 
 function asText(data: string | Blob): Promise<string> {
   if (typeof data === 'string') return Promise.resolve(data)
   return data.text()
 }
 
+function hasLedgerRows(content: string): boolean {
+  return /^\|\s*\d+/m.test(content)
+}
+
+function withBundledLedger(loaded: Record<LedgerFileName, { content: string; present: boolean }>): {
+  initial: Record<LedgerFileName, { content: string; present: boolean }>
+  dirty: LedgerFileName[]
+} {
+  if (hasLedgerRows(loaded.transactions.content)) {
+    return { initial: loaded, dirty: [] }
+  }
+  return {
+    initial: {
+      categories: { content: SEED.categories, present: true },
+      transactions: { content: SEED.transactions, present: true },
+    },
+    dirty: [...FILES],
+  }
+}
+
 function createMemoryBackend(
   dataDir: string,
   initial: Record<LedgerFileName, { content: string; present: boolean }>,
   persist: (name: LedgerFileName, content: string) => Promise<void>,
+  seeded: LedgerFileName[] = [],
 ): LedgerFileBackend {
   const files: Record<LedgerFileName, string> = {
     categories: initial.categories.content,
@@ -24,7 +51,7 @@ function createMemoryBackend(
     categories: initial.categories.present,
     transactions: initial.transactions.present,
   }
-  const dirty = new Set<LedgerFileName>()
+  const dirty = new Set<LedgerFileName>(seeded)
 
   return {
     dataDir,
@@ -52,7 +79,7 @@ function createMemoryBackend(
 }
 
 async function createCapacitorBackend(): Promise<LedgerFileBackend> {
-  const initial: Record<LedgerFileName, { content: string; present: boolean }> = {
+  const loaded: Record<LedgerFileName, { content: string; present: boolean }> = {
     categories: { content: '', present: false },
     transactions: { content: '', present: false },
   }
@@ -65,36 +92,48 @@ async function createCapacitorBackend(): Promise<LedgerFileBackend> {
         encoding: Encoding.UTF8,
       })
       const content = await asText(result.data)
-      initial[name] = { content, present: content.trim().length > 0 }
+      loaded[name] = { content, present: hasLedgerRows(content) }
     } catch {
-      initial[name] = { content: '', present: false }
+      loaded[name] = { content: '', present: false }
     }
   }
 
-  return createMemoryBackend('应用内部存储', initial, async (name, content) => {
-    await Filesystem.writeFile({
-      path: `${name}.md`,
-      data: content,
-      directory: Directory.Data,
-      encoding: Encoding.UTF8,
-    })
-  })
+  const { initial, dirty } = withBundledLedger(loaded)
+  return createMemoryBackend(
+    '应用内部存储',
+    initial,
+    async (name, content) => {
+      await Filesystem.writeFile({
+        path: `${name}.md`,
+        data: content,
+        directory: Directory.Data,
+        encoding: Encoding.UTF8,
+      })
+    },
+    dirty,
+  )
 }
 
 function createLocalStorageBackend(): LedgerFileBackend {
-  const initial: Record<LedgerFileName, { content: string; present: boolean }> = {
+  const loaded: Record<LedgerFileName, { content: string; present: boolean }> = {
     categories: { content: '', present: false },
     transactions: { content: '', present: false },
   }
 
   for (const name of FILES) {
     const content = window.localStorage.getItem(`${STORAGE_PREFIX}${name}.md`) ?? ''
-    initial[name] = { content, present: content.length > 0 }
+    loaded[name] = { content, present: hasLedgerRows(content) }
   }
 
-  return createMemoryBackend('浏览器本地存储', initial, async (name, content) => {
-    window.localStorage.setItem(`${STORAGE_PREFIX}${name}.md`, content)
-  })
+  const { initial, dirty } = withBundledLedger(loaded)
+  return createMemoryBackend(
+    '浏览器本地存储',
+    initial,
+    async (name, content) => {
+      window.localStorage.setItem(`${STORAGE_PREFIX}${name}.md`, content)
+    },
+    dirty,
+  )
 }
 
 export async function createWebApi(): Promise<DesktopApi> {

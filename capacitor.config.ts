@@ -7,6 +7,7 @@ const config: CapacitorConfig = {
   backgroundColor: '#f3f6f4',
   android: {
     allowMixedContent: false,
+    adjustMarginsForEdgeToEdge: 'auto',
   },
 }
 

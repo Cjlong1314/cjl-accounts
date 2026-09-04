@@ -23,6 +23,17 @@ export function monthLabel(month: string): string {
   return `${year}年${Number.parseInt(m, 10)}月`
 }
 
+export function shortMonthLabel(month: string): string {
+  const parts = month.split('-')
+  return `${Number.parseInt(parts[1] ?? '1', 10)}月`
+}
+
+export function axisMoney(value: number): string {
+  const abs = Math.abs(value)
+  if (abs >= 10000) return `${value / 10000}万`
+  return String(value)
+}
+
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
   return String(error)

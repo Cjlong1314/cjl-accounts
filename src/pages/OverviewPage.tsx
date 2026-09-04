@@ -1,6 +1,6 @@
 import { useAsync } from '../lib/useAsync'
-import { PIE_COLORS } from '../lib/chartColors'
-import { formatMoney, monthLabel } from '../lib/format'
+import { PIE_COLORS, groupSmallSlices } from '../lib/chartColors'
+import { formatMoney, monthLabel, shortMonthLabel, axisMoney } from '../lib/format'
 import { CategoryIcon } from '../lib/CategoryIcon'
 import { EmptyState, PageStatus, Panel, StatCard } from '../components/ui'
 import {
@@ -23,6 +23,7 @@ interface OverviewPageProps {
 
 export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
   const { data, loading, error } = useAsync(() => window.api.stats.overview(), [])
+  const pieData = data ? groupSmallSlices(data.categoryBreakdown) : []
 
   return (
     <PageStatus loading={loading} error={error}>
@@ -41,17 +42,17 @@ export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
                 <EmptyState text="还没有足够的记账数据" />
               ) : (
                 <div className="chart-box">
-                  <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={data.last6Months}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.last6Months} barCategoryGap="22%" barGap={3} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#dce7e2" />
-                      <XAxis dataKey="month" tickFormatter={monthLabel} tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} />
+                      <XAxis dataKey="month" tickFormatter={shortMonthLabel} tick={{ fontSize: 11 }} interval={0} />
+                      <YAxis tickFormatter={axisMoney} tick={{ fontSize: 11 }} width={36} />
                       <Tooltip
                         formatter={(value) => formatMoney(Number(value))}
                         labelFormatter={(label) => monthLabel(String(label))}
                       />
-                      <Bar dataKey="income" name="收入" fill="#1f7a63" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="expense" name="支出" fill="#c46b4a" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="income" name="收入" fill="#1f7a63" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                      <Bar dataKey="expense" name="支出" fill="#c46b4a" radius={[4, 4, 0, 0]} maxBarSize={28} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -59,32 +60,37 @@ export function OverviewPage({ onRecord, onEdit }: OverviewPageProps) {
             </Panel>
 
             <Panel title="本月支出分类">
-              {data.categoryBreakdown.length === 0 ? (
+              {pieData.length === 0 ? (
                 <EmptyState text="本月还没有支出" />
               ) : (
-                <div className="chart-box pie-layout">
-                  <ResponsiveContainer width="100%" height={220}>
-                    <PieChart>
-                      <Pie
-                        data={data.categoryBreakdown}
-                        dataKey="amount"
-                        nameKey="name"
-                        innerRadius={52}
-                        outerRadius={84}
-                        paddingAngle={2}
-                      >
-                        {data.categoryBreakdown.map((item, index) => (
-                          <Cell key={item.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value) => formatMoney(Number(value))} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="pie-layout">
+                  <div className="chart-box pie-chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          dataKey="amount"
+                          nameKey="name"
+                          innerRadius="42%"
+                          outerRadius="70%"
+                          paddingAngle={2}
+                        >
+                          {pieData.map((item, index) => (
+                            <Cell key={item.name} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatMoney(Number(value))} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                   <ul className="legend-list">
-                    {data.categoryBreakdown.map((item, index) => (
+                    {pieData.map((item, index) => (
                       <li key={item.name}>
                         <span className="dot" style={{ background: PIE_COLORS[index % PIE_COLORS.length] }} />
-                        <CategoryIcon icon={item.icon} size={14} /> {item.name}
+                        <span className="legend-name">
+                          <CategoryIcon icon={item.icon} size={14} />
+                          {item.name}
+                        </span>
                         <strong>{formatMoney(item.amount)}</strong>
                       </li>
                     ))}

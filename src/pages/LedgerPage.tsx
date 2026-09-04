@@ -106,6 +106,36 @@ export function LedgerPage({ onEdit }: LedgerPageProps) {
             <EmptyState text="没有符合条件的流水" />
           ) : (
             <>
+              <ul className="ledger-cards">
+                {pagedRows.map((tx) => (
+                  <li key={tx.id} className="ledger-card">
+                    <button type="button" className="tx-row" onClick={() => onEdit(tx.id)}>
+                      <span className="tx-icon">
+                        <CategoryIcon icon={tx.category_icon} />
+                      </span>
+                      <span className="tx-main">
+                        <strong>{tx.category_name}</strong>
+                        <small>
+                          {tx.occurred_at}
+                          {tx.note ? ` · ${tx.note}` : ''}
+                        </small>
+                      </span>
+                      <span className={tx.type === 'income' ? 'amount income' : 'amount expense'}>
+                        {tx.type === 'income' ? '+' : '-'}
+                        {formatMoney(tx.amount)}
+                      </span>
+                    </button>
+                    <div className="ledger-card-actions">
+                      <button type="button" className="text-btn" onClick={() => onEdit(tx.id)}>
+                        编辑
+                      </button>
+                      <button type="button" className="text-btn danger" onClick={() => void remove(tx.id)}>
+                        删除
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
               <table className="ledger-table">
                 <thead>
                   <tr>

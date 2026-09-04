@@ -27,6 +27,16 @@ body,
   background: var(--paper);
 }
 
+.main-pane,
+.content,
+.panel,
+.stat-card,
+.split-grid,
+.stat-grid {
+  min-width: 0;
+  max-width: 100%;
+}
+
 button,
 input,
 select {
@@ -196,6 +206,8 @@ select {
   margin: 8px 0 0;
   font-size: 26px;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }
 
 .tone-income .stat-value {
@@ -224,6 +236,11 @@ select {
 
 .chart-box {
   width: 100%;
+  height: 260px;
+}
+
+.chart-box.pie-chart {
+  height: 220px;
 }
 
 .pie-layout {
@@ -250,9 +267,17 @@ select {
   border-bottom: 1px solid #eef3f0;
 }
 
+.legend-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .legend-list strong {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .dot {
@@ -504,6 +529,74 @@ select {
   min-width: 140px;
 }
 
+.ledger-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ledger-card {
+  border-bottom: 1px solid #eef3f0;
+  padding: 4px 0 8px;
+}
+
+.ledger-card .tx-row {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.ledger-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 4px 6px;
+}
+
+.stats-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.toolbar-label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.toolbar-hint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.range-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  background: #eef5f1;
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.range-btn {
+  border: 0;
+  background: transparent;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.range-btn.active {
+  background: white;
+  color: var(--pine-dark);
+  box-shadow: var(--shadow);
+  font-weight: 650;
+}
+
 .filter-summary {
   color: var(--muted);
   font-size: 13px;
@@ -659,98 +752,6 @@ select {
   box-shadow: var(--shadow);
 }
 
-@media (max-width: 860px) {
-  .app-shell {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    height: 100%;
-    height: 100dvh;
-  }
-
-  .sidebar {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 12px 12px 8px;
-    padding-top: calc(12px + env(safe-area-inset-top));
-    align-items: center;
-  }
-
-  .sidebar nav {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    width: 100%;
-    overflow-x: auto;
-  }
-
-  .nav-item {
-    padding: 8px 10px;
-    flex: 1;
-    min-width: 56px;
-    text-align: center;
-  }
-
-  .nav-item small,
-  .sidebar-foot,
-  .brand small {
-    display: none;
-  }
-
-  .topbar {
-    padding: 12px 16px 4px;
-  }
-
-  .topbar h1 {
-    font-size: 20px;
-  }
-
-  .content {
-    padding: 8px 16px 24px;
-    padding-bottom: calc(24px + env(safe-area-inset-bottom));
-  }
-
-  .stat-grid,
-  .stat-grid.three,
-  .split-grid,
-  .form-row,
-  .pie-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .chip-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .record-card {
-    max-width: none;
-    padding: 18px;
-  }
-
-  .toast {
-    right: 16px;
-    left: 16px;
-    bottom: calc(16px + env(safe-area-inset-bottom));
-  }
-}
-
-@media (max-width: 700px) {
-.stats-toolbar {
-  align-items: flex-start;
-  flex-direction: column;
-}
-
-.range-switch {
-  width: 100%;
-}
-
-.range-btn {
-  flex: 1;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-
-}
-
 @media (max-width: 1100px) {
   .stat-grid,
   .split-grid,
@@ -761,4 +762,165 @@ select {
   .chip-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+}
+
+html.is-mobile .app-shell {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+}
+
+html.is-mobile .sidebar {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 0;
+  padding: 8px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  padding-left: max(8px, env(safe-area-inset-left, 0px));
+  padding-right: max(8px, env(safe-area-inset-right, 0px));
+  align-items: stretch;
+}
+
+html.is-mobile .brand,
+html.is-mobile .sidebar-foot,
+html.is-mobile .nav-item small,
+html.is-mobile .topbar,
+html.is-mobile .topbar-record {
+  display: none;
+}
+
+html.is-mobile .sidebar nav {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  width: 100%;
+  gap: 4px;
+}
+
+html.is-mobile .nav-item {
+  padding: 10px 4px;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  border-radius: 10px;
+}
+
+html.is-mobile .nav-item span {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+html.is-mobile .main-pane {
+  min-height: 0;
+  overflow: auto;
+  overflow-x: hidden;
+}
+
+html.is-mobile .content {
+  padding: 12px 12px 28px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+}
+
+html.is-mobile .split-grid,
+html.is-mobile .form-row,
+html.is-mobile .pie-layout {
+  grid-template-columns: 1fr;
+}
+
+html.is-mobile .stat-grid,
+html.is-mobile .stat-grid.three {
+  grid-template-columns: 1fr 1fr;
+}
+
+html.is-mobile .stat-grid.three .stat-card:last-child {
+  grid-column: 1 / -1;
+}
+
+html.is-mobile .stat-card {
+  padding: 12px;
+}
+
+html.is-mobile .stat-value {
+  font-size: clamp(16px, 4.8vw, 22px);
+}
+
+html.is-mobile .stat-hint {
+  display: none;
+}
+
+html.is-mobile .chart-box {
+  height: 210px;
+}
+
+html.is-mobile .chart-box.pie-chart {
+  height: 170px;
+}
+
+html.is-mobile .chip-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+html.is-mobile .record-card {
+  max-width: none;
+  padding: 18px;
+}
+
+html.is-mobile .filter-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+html.is-mobile .filter-bar label {
+  min-width: 0;
+}
+
+html.is-mobile .panel-head {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+html.is-mobile .filter-summary {
+  display: block;
+  text-align: right;
+  max-width: 58%;
+  line-height: 1.4;
+}
+
+html.is-mobile .ledger-table {
+  display: none;
+}
+
+html.is-mobile .ledger-cards {
+  display: block;
+}
+
+html.is-mobile .stats-toolbar {
+  align-items: stretch;
+  flex-direction: column;
+  gap: 10px;
+}
+
+html.is-mobile .toolbar-hint {
+  display: none;
+}
+
+html.is-mobile .range-switch {
+  width: 100%;
+}
+
+html.is-mobile .range-btn {
+  flex: 1;
+  padding: 8px 6px;
+  font-size: 13px;
+}
+
+html.is-mobile .toast {
+  right: 16px;
+  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 }
