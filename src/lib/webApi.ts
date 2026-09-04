@@ -2,15 +2,10 @@ import { Capacitor } from '@capacitor/core'
 import { Directory, Encoding, Filesystem } from '@capacitor/filesystem'
 import type { DesktopApi } from '../../shared/api'
 import { MarkdownStore, type LedgerFileBackend, type LedgerFileName } from '../../shared/markdownStore'
-import categoriesSeed from '../../data/categories.md?raw'
-import transactionsSeed from '../../data/transactions.md?raw'
 
 const FILES: LedgerFileName[] = ['categories', 'transactions']
 const STORAGE_PREFIX = 'cjl-accounts:'
-const SEED: Record<LedgerFileName, string> = {
-  categories: categoriesSeed,
-  transactions: transactionsSeed,
-}
+const ANDROID_CLEAR_FLAG = 'cjl-accounts-android-ledger-cleared'
 
 function asText(data: string | Blob): Promise<string> {
   if (typeof data === 'string') return Promise.resolve(data)
@@ -21,27 +16,10 @@ function hasLedgerRows(content: string): boolean {
   return /^\|\s*\d+/m.test(content)
 }
 
-function withBundledLedger(loaded: Record<LedgerFileName, { content: string; present: boolean }>): {
-  initial: Record<LedgerFileName, { content: string; present: boolean }>
-  dirty: LedgerFileName[]
-} {
-  if (hasLedgerRows(loaded.transactions.content)) {
-    return { initial: loaded, dirty: [] }
-  }
-  return {
-    initial: {
-      categories: { content: SEED.categories, present: true },
-      transactions: { content: SEED.transactions, present: true },
-    },
-    dirty: [...FILES],
-  }
-}
-
 function createMemoryBackend(
   dataDir: string,
   initial: Record<LedgerFileName, { content: string; present: boolean }>,
   persist: (name: LedgerFileName, content: string) => Promise<void>,
-  seeded: LedgerFileName[] = [],
 ): LedgerFileBackend {
   const files: Record<LedgerFileName, string> = {
     categories: initial.categories.content,
@@ -51,7 +29,7 @@ function createMemoryBackend(
     categories: initial.categories.present,
     transactions: initial.transactions.present,
   }
-  const dirty = new Set<LedgerFileName>(seeded)
+  const dirty = new Set<LedgerFileName>()
 
   return {
     dataDir,
@@ -78,7 +56,24 @@ function createMemoryBackend(
   }
 }
 
+async function clearNativeLedgerOnce(): Promise<void> {
+  if (window.localStorage.getItem(ANDROID_CLEAR_FLAG) === '1') return
+  for (const name of FILES) {
+    try {
+      await Filesystem.deleteFile({
+        path: `${name}.md`,
+        directory: Directory.Data,
+      })
+    } catch {
+      // file may not exist
+    }
+  }
+  window.localStorage.setItem(ANDROID_CLEAR_FLAG, '1')
+}
+
 async function createCapacitorBackend(): Promise<LedgerFileBackend> {
+  await clearNativeLedgerOnce()
+
   const loaded: Record<LedgerFileName, { content: string; present: boolean }> = {
     categories: { content: '', present: false },
     transactions: { content: '', present: false },
@@ -98,20 +93,14 @@ async function createCapacitorBackend(): Promise<LedgerFileBackend> {
     }
   }
 
-  const { initial, dirty } = withBundledLedger(loaded)
-  return createMemoryBackend(
-    '应用内部存储',
-    initial,
-    async (name, content) => {
-      await Filesystem.writeFile({
-        path: `${name}.md`,
-        data: content,
-        directory: Directory.Data,
-        encoding: Encoding.UTF8,
-      })
-    },
-    dirty,
-  )
+  return createMemoryBackend('应用内部存储', loaded, async (name, content) => {
+    await Filesystem.writeFile({
+      path: `${name}.md`,
+      data: content,
+      directory: Directory.Data,
+      encoding: Encoding.UTF8,
+    })
+  })
 }
 
 function createLocalStorageBackend(): LedgerFileBackend {
@@ -125,15 +114,9 @@ function createLocalStorageBackend(): LedgerFileBackend {
     loaded[name] = { content, present: hasLedgerRows(content) }
   }
 
-  const { initial, dirty } = withBundledLedger(loaded)
-  return createMemoryBackend(
-    '浏览器本地存储',
-    initial,
-    async (name, content) => {
-      window.localStorage.setItem(`${STORAGE_PREFIX}${name}.md`, content)
-    },
-    dirty,
-  )
+  return createMemoryBackend('浏览器本地存储', loaded, async (name, content) => {
+    window.localStorage.setItem(`${STORAGE_PREFIX}${name}.md`, content)
+  })
 }
 
 export async function createWebApi(): Promise<DesktopApi> {
