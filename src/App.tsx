@@ -65,7 +65,7 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <p className="sidebar-foot">数据保存在项目 data 目录的 md 文件中</p>
+        <p className="sidebar-foot">账本保存在本地 Markdown 文件中</p>
       </aside>
 
       <main className="main-pane">

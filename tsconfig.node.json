@@ -9,5 +9,5 @@
     "types": ["node"],
     "noEmit": true
   },
-  "include": ["vite.config.ts", "electron/**/*.ts", "shared/**/*.ts"]
+  "include": ["vite.config.ts", "vite.config.web.ts", "capacitor.config.ts", "electron/**/*.ts", "shared/**/*.ts"]
 }
